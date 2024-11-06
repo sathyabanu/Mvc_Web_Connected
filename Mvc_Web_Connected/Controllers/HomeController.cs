@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.CodeAnalysis.Elfie.Diagnostics;
 using Microsoft.EntityFrameworkCore;
 using Mvc_Web_Connected.Models;
 using Newtonsoft.Json;
@@ -64,59 +65,9 @@ namespace Mvc_Web_Connected.Controllers
             return View(department);
         }
 
-        public async Task<IActionResult> Edit(int id)
-        {
-            Department department = new Department();
-            department = await GetDepartmentsAsync(id) ;
-            return View("Edit", department);
-        }
+        
 
-        [HttpPost]
-        public async Task<IActionResult> UpdateDepartment(int id, Department department)
-        {
-            id = department.DeptId;
-            HttpClient client = new HttpClient();
-         
-            string apiUrl = $"https://localhost:7183/api/Department1/{id}";
-            var jsonContent = JsonConvert.SerializeObject(department);
-            var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
-
-            var response = await client.PutAsync(apiUrl, content);
-
-            if (response.IsSuccessStatusCode)
-            {
-                return RedirectToAction("Index"); // or appropriate action
-            }
-            else
-            {
-                ModelState.AddModelError("", "Error updating department.");
-                return View(department);
-            }
-        }
-
-        private static async Task<Department> GetDepartmentsAsync(int id)
-        {
-            HttpClient client = new HttpClient();
-            // Set the base address of the API
-            client.BaseAddress = new Uri("https://localhost:7183/");
-            client.DefaultRequestHeaders.Accept.Clear();
-            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
-
-            HttpResponseMessage response = await client.GetAsync($"api/Department1/{id}");
-            // Check if the request was successful
-            if (response.IsSuccessStatusCode)
-            {
-                // Deserialize the JSON response to a List<Department>
-                var responseData = await response.Content.ReadAsStringAsync();
-                return System.Text.Json.JsonSerializer.Deserialize<Department>(responseData,
-                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
-            }
-            else
-            {
-                throw new Exception("Failed to retrieve departments from API");
-            }
-        }
-        private static async Task<List<Department>> GetDepartmentsAsync(  )
+    private static async Task<List<Department>> GetDepartmentsAsync(  )
         {
             HttpClient client = new HttpClient();
             // Set the base address of the API
@@ -157,7 +108,112 @@ namespace Mvc_Web_Connected.Controllers
             // Return true if the request was successful
             return response.IsSuccessStatusCode;
         }
+        public async Task<IActionResult> Edit(int id)
+        {
+            Department department = new Department();
+            department = await GetDepartmentsAsync(id);
+            return View("Edit", department);
+        }
 
-        
+        [HttpPost]
+        public async Task<IActionResult> UpdateDepartment(int id, Department department)
+        {
+
+            HttpClient client = new HttpClient();
+
+            string apiUrl = $"https://localhost:7183/api/Department1/{id}";
+            var jsonContent = JsonConvert.SerializeObject(department);
+            var content = new StringContent(jsonContent, Encoding.UTF8, "application/json");
+
+            var response = await client.PutAsync(apiUrl, content);
+
+            if (response.IsSuccessStatusCode)
+            {
+                return RedirectToAction("Index"); // or appropriate action
+            }
+            else
+            {
+                ModelState.AddModelError("", "Error updating department.");
+                return View(department);
+            }
+        }
+        private static async Task<Department> GetDepartmentsAsync(int id)
+        {
+            HttpClient client = new HttpClient();
+            // Set the base address of the API
+            client.BaseAddress = new Uri("https://localhost:7183/");
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpResponseMessage response = await client.GetAsync($"api/Department1/{id}");
+            // Check if the request was successful
+            if (response.IsSuccessStatusCode)
+            {
+                // Deserialize the JSON response to a List<Department>
+                var responseData = await response.Content.ReadAsStringAsync();
+                return System.Text.Json.JsonSerializer.Deserialize<Department>(responseData,
+                new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+            else
+            {
+                throw new Exception("Failed to retrieve departments from API");
+            }
+        }
+        [HttpGet]
+        public async Task<IActionResult> Delete(int id)
+        {
+            var department = await GetDepartmentByIdAsync(id); // Retrieve the department by ID
+            
+            return View("Delete",department); // Pass the department to the Delete view for confirmation
+        }
+
+        // POST: Home/DeleteConfirmed/{id}
+        [HttpPost, ActionName("DeleteConfirmed")]
+        [Route("Home/DeleteConfirmed/{id}")]
+        public async Task<IActionResult> DeleteConfirmed(int id)
+        {
+            var isSuccess = await DeleteDepartmentAsync(id); // Call method to delete the department
+            if (isSuccess)
+            {
+                return RedirectToAction("Index"); // Redirect to Index if deletion is successful
+            }
+            else
+            {
+                ModelState.AddModelError(string.Empty, "Failed to delete department.");
+            }
+            return RedirectToAction("Index"); // Return to the delete view if there was an error
+        }
+        private async Task<Department> GetDepartmentByIdAsync(int id)
+        {
+            HttpClient client = new HttpClient();
+
+            client.BaseAddress = new Uri("https://localhost:7183/");
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpResponseMessage response = await client.GetAsync($"api/Department1/{id}");
+            if (response.IsSuccessStatusCode)
+            {
+                var responseData = await response.Content.ReadAsStringAsync();
+                return System.Text.Json.JsonSerializer.Deserialize<Department>(responseData, new JsonSerializerOptions { PropertyNameCaseInsensitive = true });
+            }
+
+            else
+            {
+                throw new Exception("Failed to delete from api.");
+            }
+        }
+
+        // Method to call the Web API and delete a department
+        private async Task<bool> DeleteDepartmentAsync(int id)
+        {
+            HttpClient client = new HttpClient();
+            client.BaseAddress = new Uri("https://localhost:7183/"); // Ensure this matches your API's base URL
+            client.DefaultRequestHeaders.Accept.Clear();
+            client.DefaultRequestHeaders.Accept.Add(new MediaTypeWithQualityHeaderValue("application/json"));
+
+            HttpResponseMessage response = await client.DeleteAsync($"api/Department1/{id}"); // Send the DELETE request
+            return response.IsSuccessStatusCode; // Return true if successful
+        }
     }
 }
